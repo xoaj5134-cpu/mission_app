@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from datetime import datetime  # 제출 시간 저장용
-from io import BytesIO         # 엑셀 다운로드용
 
 # 기본 설정
 st.set_page_config(
@@ -157,10 +156,10 @@ def save_submission_to_csv(reason: str):
 
 
 # -----------------------------
-# submissions.csv → 엑셀 파일(BytesIO)로 만들기
+# submissions.csv → CSV 바이트로 반환 (다운로드용)
 # -----------------------------
-def get_submissions_excel_bytes():
-    """submissions.csv 내용을 submissions.xlsx 엑셀 바이너리로 변환."""
+def get_submissions_csv_bytes():
+    """submissions.csv 내용을 그대로 CSV 바이트로 반환 (엑셀로 열기 가능)."""
     if not SUBMISSION_FILE.exists():
         return None
 
@@ -169,12 +168,8 @@ def get_submissions_excel_bytes():
     except Exception:
         return None
 
-    output = BytesIO()
-    # openpyxl 엔진 사용 (requirements.txt에 openpyxl 추가 필요)
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="제출내역")
-    output.seek(0)
-    return output
+    csv_str = df.to_csv(index=False, encoding="utf-8-sig")
+    return csv_str.encode("utf-8-sig")
 
 
 # -----------------------------
@@ -353,22 +348,22 @@ def result_page():
     if st.button("제출"):
         st.session_state.reason = reason
         save_submission_to_csv(reason)  # CSV 저장
-        st.success("제출이 완료되었습니다! 🎉")
+        st.success("제출이 완료되었습니다! 🎉 (submissions.csv에 저장되었습니다.)")
 
     st.markdown("---")
 
-    # 🔽 제출 후 엑셀로 다운로드 버튼
-    st.subheader("📥 제출 내역 엑셀로 다운로드")
+    # 🔽 제출 내역 CSV 다운로드 버튼
+    st.subheader("📥 제출 내역 다운로드 (엑셀에서 열기)")
 
-    excel_bytes = get_submissions_excel_bytes()
-    if excel_bytes:
+    csv_bytes = get_submissions_csv_bytes()
+    if csv_bytes:
         st.download_button(
-            label="📥 submissions.xlsx 다운로드",
-            data=excel_bytes,
-            file_name="submissions.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            label="📥 submissions.csv 다운로드",
+            data=csv_bytes,
+            file_name="submissions.csv",
+            mime="text/csv",
         )
-        st.caption("지금까지 저장된 모든 제출 내역을 엑셀 파일로 다운로드합니다.")
+        st.caption("다운로드한 CSV 파일은 엑셀에서 바로 열 수 있습니다.")
     else:
         st.caption("아직 저장된 제출 내역이 없습니다. 먼저 '제출' 버튼을 눌러 주세요.")
 
