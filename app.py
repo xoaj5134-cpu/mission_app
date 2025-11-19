@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from datetime import datetime  # ✅ 제출 시간 저장용
+from datetime import datetime  # 제출 시간 저장용
+from io import BytesIO         # 엑셀 다운로드용
 
 # 기본 설정
 st.set_page_config(
@@ -56,7 +57,7 @@ def load_products():
         st.error("'products.csv' 파일을 찾을 수 없습니다. 앱과 같은 폴더에 위치시켜 주세요.")
         return pd.DataFrame()
 
-    # ✅ 인코딩을 여러 가지 시도 (UnicodeDecodeError 방지)
+    # 인코딩을 여러 가지 시도 (UnicodeDecodeError 방지)
     encodings_to_try = ["utf-8", "utf-8-sig", "cp949", "euc-kr"]
     last_error = None
     df = None
@@ -151,8 +152,29 @@ def save_submission_to_csv(reason: str):
     else:
         save_df = new_df
 
-    # ✅ 엑셀에서 잘 열리도록 utf-8-sig로 저장
+    # 엑셀에서 잘 열리도록 utf-8-sig로 저장
     save_df.to_csv(SUBMISSION_FILE, index=False, encoding="utf-8-sig")
+
+
+# -----------------------------
+# submissions.csv → 엑셀 파일(BytesIO)로 만들기
+# -----------------------------
+def get_submissions_excel_bytes():
+    """submissions.csv 내용을 submissions.xlsx 엑셀 바이너리로 변환."""
+    if not SUBMISSION_FILE.exists():
+        return None
+
+    try:
+        df = pd.read_csv(SUBMISSION_FILE, encoding="utf-8-sig")
+    except Exception:
+        return None
+
+    output = BytesIO()
+    # openpyxl 엔진 사용 (requirements.txt에 openpyxl 추가 필요)
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="제출내역")
+    output.seek(0)
+    return output
 
 
 # -----------------------------
@@ -165,9 +187,9 @@ def start_page():
     st.markdown("---")
 
     missions = [
-        {"label": "월요일 장보기 - 10,000원", "name": "월요일 장보기", "budget": 10000},
-        {"label": "화요일 장보기 - 20,000원", "name": "화요일 장보기", "budget": 20000},
-        {"label": "수요일 장보기 - 30,000원", "name": "수요일 장보기", "budget": 30000},
+        {"label": "미션 1 - 10,000원", "name": "미션 1", "budget": 10000},
+        {"label": "미션 2 - 20,000원", "name": "미션 2", "budget": 20000},
+        {"label": "미션 3 - 30,000원", "name": "미션 3", "budget": 30000},
     ]
 
     labels = [m["label"] for m in missions]
@@ -327,11 +349,28 @@ def result_page():
         placeholder="예) 친구들과 함께 나눠 먹을 수 있어서 선택했어요...",
     )
 
+    # 제출 버튼
     if st.button("제출"):
         st.session_state.reason = reason
-        # ✅ CSV 파일에 저장
-        save_submission_to_csv(reason)
-        st.success("제출이 완료되었습니다! 🎉 (submissions.csv에 저장되었습니다.)")
+        save_submission_to_csv(reason)  # CSV 저장
+        st.success("제출이 완료되었습니다! 🎉")
+
+    st.markdown("---")
+
+    # 🔽 제출 후 엑셀로 다운로드 버튼
+    st.subheader("📥 제출 내역 엑셀로 다운로드")
+
+    excel_bytes = get_submissions_excel_bytes()
+    if excel_bytes:
+        st.download_button(
+            label="📥 submissions.xlsx 다운로드",
+            data=excel_bytes,
+            file_name="submissions.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        st.caption("지금까지 저장된 모든 제출 내역을 엑셀 파일로 다운로드합니다.")
+    else:
+        st.caption("아직 저장된 제출 내역이 없습니다. 먼저 '제출' 버튼을 눌러 주세요.")
 
     st.markdown("---")
     st.info("다시 미션을 선택하고 싶다면 아래 버튼을 눌러 시작화면으로 돌아갈 수 있습니다.")
