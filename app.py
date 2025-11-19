@@ -165,9 +165,9 @@ def start_page():
     st.markdown("---")
 
     missions = [
-        {"label": "미션 1 - 10,000원", "name": "미션 1", "budget": 10000},
-        {"label": "미션 2 - 20,000원", "name": "미션 2", "budget": 20000},
-        {"label": "미션 3 - 30,000원", "name": "미션 3", "budget": 30000},
+        {"label": "월요일 장보기 - 10,000원", "name": "월요일 장보기", "budget": 10000},
+        {"label": "화요일 장보기 - 20,000원", "name": "화요일 장보기", "budget": 20000},
+        {"label": "수요일 장보기 - 30,000원", "name": "수요일 장보기", "budget": 30000},
     ]
 
     labels = [m["label"] for m in missions]
