@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from pathlib import Path
+from datetime import datetime  # ✅ 제출 시간 저장용
 
 # 기본 설정
 st.set_page_config(
@@ -8,6 +9,10 @@ st.set_page_config(
     page_icon="🛒",
     layout="wide",
 )
+
+# 제출 내용이 저장될 CSV 파일 이름
+SUBMISSION_FILE = Path("submissions.csv")
+
 
 # -----------------------------
 # Session State 초기화 함수
@@ -105,6 +110,49 @@ def load_products():
     df["price"] = pd.to_numeric(df["price"], errors="coerce").fillna(0).astype(int)
 
     return df
+
+
+# -----------------------------
+# 제출 내용 CSV에 저장하는 함수
+# -----------------------------
+def save_submission_to_csv(reason: str):
+    """학생 제출 내용을 submissions.csv에 한 줄씩 추가 저장합니다."""
+    # 장바구니 정보를 문자열로 만들어 저장 (엑셀 한 셀에 들어가도록)
+    if st.session_state.cart:
+        cart_items_str = " | ".join(
+            [f"{item['name']}:{item['price']}" for item in st.session_state.cart]
+        )
+    else:
+        cart_items_str = ""
+
+    total = calc_total()
+    remaining = (st.session_state.budget or 0) - total
+
+    new_row = {
+        "제출시간": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "미션이름": st.session_state.mission_name,
+        "예산": st.session_state.budget,
+        "총사용금액": total,
+        "남은예산": remaining,
+        "장바구니내역": cart_items_str,
+        "구매이유": reason,
+    }
+
+    new_df = pd.DataFrame([new_row])
+
+    if SUBMISSION_FILE.exists():
+        try:
+            # 기존 파일 읽어서 뒤에 이어붙이기
+            exist_df = pd.read_csv(SUBMISSION_FILE, encoding="utf-8-sig")
+            save_df = pd.concat([exist_df, new_df], ignore_index=True)
+        except Exception:
+            # 혹시 읽기 오류가 나면 새로 생성
+            save_df = new_df
+    else:
+        save_df = new_df
+
+    # ✅ 엑셀에서 잘 열리도록 utf-8-sig로 저장
+    save_df.to_csv(SUBMISSION_FILE, index=False, encoding="utf-8-sig")
 
 
 # -----------------------------
@@ -281,7 +329,9 @@ def result_page():
 
     if st.button("제출"):
         st.session_state.reason = reason
-        st.success("제출이 완료되었습니다! 🎉")
+        # ✅ CSV 파일에 저장
+        save_submission_to_csv(reason)
+        st.success("제출이 완료되었습니다! 🎉 (submissions.csv에 저장되었습니다.)")
 
     st.markdown("---")
     st.info("다시 미션을 선택하고 싶다면 아래 버튼을 눌러 시작화면으로 돌아갈 수 있습니다.")
