@@ -9,7 +9,6 @@ st.set_page_config(
     layout="wide",
 )
 
-
 # -----------------------------
 # Session State 초기화 함수
 # -----------------------------
@@ -41,6 +40,9 @@ def calc_total():
     return sum(item["price"] for item in st.session_state.cart)
 
 
+# -----------------------------
+# products.csv 불러오기
+# -----------------------------
 def load_products():
     """products.csv 파일을 불러와서 DataFrame으로 반환합니다."""
     products_path = Path("products.csv")
@@ -49,7 +51,28 @@ def load_products():
         st.error("'products.csv' 파일을 찾을 수 없습니다. 앱과 같은 폴더에 위치시켜 주세요.")
         return pd.DataFrame()
 
-    df = pd.read_csv(products_path)
+    # ✅ 인코딩을 여러 가지 시도 (UnicodeDecodeError 방지)
+    encodings_to_try = ["utf-8", "utf-8-sig", "cp949", "euc-kr"]
+    last_error = None
+    df = None
+
+    for enc in encodings_to_try:
+        try:
+            df = pd.read_csv(products_path, encoding=enc)
+            break
+        except UnicodeDecodeError as e:
+            last_error = e
+            continue
+
+    if df is None:
+        st.error(
+            "🚨 'products.csv' 파일을 읽는 동안 인코딩 오류가 발생했습니다.\n\n"
+            "파일을 엑셀이나 메모장에서 'UTF-8' 또는 'CSV UTF-8(쉼표로 분리)' 형식으로 다시 저장한 뒤 "
+            "다시 업로드/배포해 주세요."
+        )
+        if last_error:
+            st.caption(f"(마지막 오류: {last_error})")
+        return pd.DataFrame()
 
     # 한글 컬럼명을 사용했을 경우를 대비한 매핑
     rename_map = {}
@@ -61,6 +84,8 @@ def load_products():
         rename_map["imageurl"] = "image_url"
     if "이미지url" in df.columns:
         rename_map["이미지url"] = "image_url"
+    if "이미지URL" in df.columns:
+        rename_map["이미지URL"] = "image_url"
 
     if rename_map:
         df = df.rename(columns=rename_map)
