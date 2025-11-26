@@ -1,0 +1,355 @@
+import streamlit as st
+import pandas as pd
+import altair as alt
+
+
+# 페이지 기본 설정
+st.set_page_config(
+    page_title="통계 포스터 메이커",
+    page_icon="📊",
+    layout="wide"
+)
+
+# 세션 상태 초기화
+if "topic" not in st.session_state:
+    st.session_state.topic = ""
+if "question" not in st.session_state:
+    st.session_state.question = ""
+if "reason" not in st.session_state:
+    st.session_state.reason = ""
+if "plan" not in st.session_state:
+    st.session_state.plan = ""
+if "target" not in st.session_state:
+    st.session_state.target = ""
+if "sample_size" not in st.session_state:
+    st.session_state.sample_size = 30
+if "questions_df" not in st.session_state:
+    st.session_state.questions_df = pd.DataFrame(
+        {
+            "질문": ["예시) 하루에 음료를 몇 번 마시나요?"],
+            "질문 유형(단일/복수/서술)": ["단일"],
+            "선택지 예시(쉼표로 구분)": ["0번, 1~2번, 3~4번, 5번 이상"],
+        }
+    )
+if "summary_df" not in st.session_state:
+    st.session_state.summary_df = pd.DataFrame(
+        {
+            "범주": ["예시) 1~2번", "예시) 3~4번"],
+            "빈도(명)": [12, 8],
+        }
+    )
+
+# 사이드바
+st.sidebar.title("📊 통계 포스터 메이커")
+st.sidebar.markdown(
+    """
+    이 앱은 **통계 포스터**를 만들기 위한
+    전체 과정을 차례대로 도와줍니다.
+
+    1️⃣ 주제 정하기  
+    2️⃣ 조사 계획 세우기  
+    3️⃣ 설문 문항 만들기  
+    4️⃣ 자료 정리·분석하기  
+    5️⃣ 포스터 내용 정리하기  
+
+    왼쪽에서 단계를 선택해 진행해 보세요.
+    """
+)
+
+step = st.sidebar.radio(
+    "단계 선택",
+    [
+        "👋 시작하기",
+        "1단계 · 주제 정하기",
+        "2단계 · 계획 세우기",
+        "3단계 · 설문 문항 만들기",
+        "4단계 · 자료 정리·분석",
+        "5단계 · 포스터 내용 정리",
+    ],
+)
+
+# 공통: 상단 제목
+st.title("📊 통계 포스터 메이커")
+
+# 0. 시작 화면
+if step == "👋 시작하기":
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.subheader("이 앱으로 무엇을 할 수 있나요?")
+        st.markdown(
+            """
+            이 앱은 **통계 포스터 작성 전 과정을 안내하는 길잡이**입니다.
+
+            - 🧠 **주제와 조사 질문**을 정하고
+            - 🗓️ **조사 계획과 대상**을 정리하고
+            - 📋 **설문 문항**을 설계하고
+            - 📈 **자료를 표와 그래프로 정리**한 뒤
+            - 📝 마지막에는 **포스터에 들어갈 글과 구조**까지 정리할 수 있어요.
+
+            각 단계에서 입력한 내용은 앱 안에 저장되어
+            다음 단계에서 계속 활용됩니다.
+            """
+        )
+
+        st.subheader("사용 순서")
+        st.markdown(
+            """
+            1. **왼쪽 사이드바에서 1단계부터 차례대로 선택**합니다.  
+            2. 각 화면의 안내를 읽고 **입력칸을 채워 넣으세요.**  
+            3. 4단계에서는 표를 완성하면 **자동으로 그래프가 생성**됩니다.  
+            4. 5단계에서 지금까지 내용을 모아 **포스터 초안을 정리**합니다.
+
+            👉 이제 왼쪽에서 **“1단계 · 주제 정하기”**를 눌러 시작해 보세요!
+            """
+        )
+
+    with col2:
+        st.info(
+            """
+            ✅ **준비물 체크**
+
+            - 조사하고 싶은 **주제 아이디어**
+            - 조사 대상(우리 반, 학년, 학교 등)
+            - 함께 작업할 팀원 이름
+            - 조사에 사용할 기기(태블릿/컴퓨터/휴대폰)
+
+            모두 준비되었다면 1단계로 이동하세요!
+            """
+        )
+
+# 1. 주제 정하기
+elif step == "1단계 · 주제 정하기":
+    st.subheader("1단계 · 주제 정하기")
+
+    st.markdown(
+        """
+        먼저 **통계 포스터의 주제와 조사 질문**을 정해 봅시다.
+
+        - ‘무엇이 궁금한지’를 한 문장으로 말해 보세요.
+        - **누구의**, **어떤 행동/생각**을 조사할지 구체적으로 적습니다.
+        """
+    )
+
+    st.text_input(
+        "포스터 주제 (예: 우리 학교 학생들의 음료 선택 이유)",
+        key="topic",
+    )
+    st.text_area(
+        "연구(조사) 질문 (예: 학년에 따라 선호하는 음료 종류에 차이가 있을까?)",
+        key="question",
+        height=80,
+    )
+    st.text_area(
+        "왜 이 주제를 선택했나요? (선택 이유, 배경)",
+        key="reason",
+        height=80,
+    )
+
+    st.markdown("---")
+    st.markdown("### 내 주제 요약")
+    if st.session_state.topic or st.session_state.question:
+        st.success(
+            f"**주제:** {st.session_state.topic or '미입력'}  \n"
+            f"**조사 질문:** {st.session_state.question or '미입력'}"
+        )
+    else:
+        st.info("위 입력칸을 채우면 이곳에 요약이 나타납니다.")
+
+# 2. 계획 세우기
+elif step == "2단계 · 계획 세우기":
+    st.subheader("2단계 · 조사 계획 세우기")
+
+    st.markdown(
+        """
+        이번 단계에서는 **누구를, 얼마나, 어떻게 조사할지** 계획합니다.
+
+        - 조사 대상(누구를 조사할지)
+        - 예상 인원 수(표본 크기)
+        - 조사 시기, 도구(구글 설문지, 종이 설문 등)
+        - 팀원 역할 분담
+        """
+    )
+
+    st.text_input(
+        "조사 대상 (예: 2학년 전체, 우리 반 30명 등)",
+        key="target",
+    )
+    st.number_input(
+        "예상 조사 인원(명)",
+        min_value=1,
+        max_value=1000,
+        key="sample_size",
+    )
+    st.text_area(
+        "조사 방법 및 일정, 역할 분담 계획",
+        key="plan",
+        height=120,
+        placeholder="예) 5월 둘째 주에 구글 설문지로 조사, A: 설문 제작, B: 홍보, C: 자료 정리...",
+    )
+
+    st.markdown("---")
+    st.markdown("### 내 조사 계획 한눈에 보기")
+    st.write(f"**조사 대상:** {st.session_state.target or '미입력'}")
+    st.write(f"**예상 인원:** {st.session_state.sample_size}명")
+    st.write("**조사 방법·일정·역할:**")
+    st.write(st.session_state.plan or "미입력")
+
+# 3. 설문 문항 만들기
+elif step == "3단계 · 설문 문항 만들기":
+    st.subheader("3단계 · 설문 문항 만들기")
+
+    st.markdown(
+        """
+        조사의 **질문 리스트**를 만들어 봅시다.
+
+        - 한 질문에는 **한 가지 내용만** 묻기
+        - 객관식 선택지는 **겹치지 않고, 빠짐없이** 만들기
+        - 필요한 경우 마지막에 “기타(직접 입력)” 추가하기
+        """
+    )
+
+    st.markdown("#### 설문 문항 표 작성")
+    st.caption("예시 행은 필요 없으면 지워도 됩니다.")
+
+    questions_df = st.data_editor(
+        st.session_state.questions_df,
+        num_rows="dynamic",
+        use_container_width=True,
+    )
+    st.session_state.questions_df = questions_df
+
+    st.markdown("---")
+    st.markdown("### 점검하기 체크리스트")
+    st.checkbox("질문에 어려운 전문 용어를 사용하지 않았다.", key="chk_q1")
+    st.checkbox("질문 하나에 두 가지 이상을 묻지 않았다.", key="chk_q2")
+    st.checkbox("선택지가 서로 겹치지 않게 만들었다.", key="chk_q3")
+
+# 4. 자료 정리·분석
+elif step == "4단계 · 자료 정리·분석":
+    st.subheader("4단계 · 자료 정리·분석")
+
+    st.markdown(
+        """
+        실제 조사 결과를 정리해 **간단한 도수 분포표**를 만들고,
+        그 표를 바탕으로 **막대그래프**를 그려 봅시다.
+
+        - 한 표에는 **한 가지 질문의 결과**만 정리합니다.
+        - 각 범주(선택지)별 **응답자 수(명)** 를 적어 보세요.
+        """
+    )
+
+    st.markdown("#### 범주별 빈도표 만들기")
+    summary_df = st.data_editor(
+        st.session_state.summary_df,
+        num_rows="dynamic",
+        use_container_width=True,
+    )
+    st.session_state.summary_df = summary_df
+
+    st.markdown("---")
+    if not summary_df.empty and "범주" in summary_df.columns and "빈도(명)" in summary_df.columns:
+        st.markdown("### 막대그래프로 보기")
+
+        try:
+            chart = (
+                alt.Chart(summary_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("범주:N", title="범주(선택지)"),
+                    y=alt.Y("빈도(명):Q", title="응답자 수(명)"),
+                    tooltip=["범주", "빈도(명)"],
+                )
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+            st.caption("그래프를 보고 가장 높은/낮은 값을 찾아 설명해 보세요.")
+        except Exception as e:
+            st.error(f"그래프를 그리는 중 문제가 발생했습니다: {e}")
+    else:
+        st.info("표의 열 이름이 **'범주'**, **'빈도(명)'** 인지 확인하고 값을 입력해 주세요.")
+
+# 5. 포스터 내용 정리
+elif step == "5단계 · 포스터 내용 정리":
+    st.subheader("5단계 · 포스터 내용 정리")
+
+    st.markdown(
+        """
+        지금까지 정리한 내용을 바탕으로
+        **포스터에 들어갈 글 초안**을 만들어 봅시다.
+
+        아래 칸은 자동으로 채워진 내용을 수정해도 됩니다.
+        """
+    )
+
+    # 요약 문구 생성
+    topic = st.session_state.topic or "주제를 아직 입력하지 않았습니다."
+    question = st.session_state.question or "조사 질문을 아직 입력하지 않았습니다."
+    reason = st.session_state.reason or "선택 이유를 아직 입력하지 않았습니다."
+    target = st.session_state.target or "조사 대상을 아직 입력하지 않았습니다."
+    sample_size = st.session_state.sample_size
+
+    # 가장 큰 범주 찾기
+    summary_df = st.session_state.summary_df
+    highlight_sentence = ""
+    if (
+        not summary_df.empty
+        and "범주" in summary_df.columns
+        and "빈도(명)" in summary_df.columns
+    ):
+        try:
+            df_valid = summary_df.dropna()
+            df_valid["빈도(명)"] = pd.to_numeric(df_valid["빈도(명)"], errors="coerce")
+            df_valid = df_valid.dropna(subset=["빈도(명)"])
+            if not df_valid.empty:
+                top_row = df_valid.sort_values("빈도(명)", ascending=False).iloc[0]
+                highlight_sentence = (
+                    f"조사 결과 **'{top_row['범주']}'**라고 응답한 학생이 "
+                    f"가장 많았으며, 총 **{int(top_row['빈도(명)'])}명**이었다."
+                )
+        except Exception:
+            highlight_sentence = ""
+
+    base_text = f"""[주제]
+{topic}
+
+[조사 질문]
+{question}
+
+[연구 동기·배경]
+{reason}
+
+[조사 대상 및 방법]
+- 조사 대상: {target}
+- 조사 인원: 약 {sample_size}명
+- 조사 방법: 설문조사를 통해 자료를 수집하였다.
+
+[주요 결과]
+{highlight_sentence or "주요 결과를 이곳에 정리해 보세요."}
+
+[결론 및 제안]
+조사 결과를 바탕으로, 학생들의 실제 모습을 더 잘 이해하기 위해
+추가 조사나 학교 차원의 프로그램이 필요하다고 생각한다.
+또한 응답자들에게도 조사 결과를 공유하여 스스로 생활을 돌아볼 수 있는
+기회를 제공하는 것이 좋을 것이다.
+
+[조사의 한계]
+조사 대상과 인원이 제한적이어서 전체 학생을 완전히 대표한다고 보기는 어렵다.
+또한 설문 문항과 응답 방식에 따라 결과에 편향이 생겼을 가능성이 있다.
+"""
+
+    poster_text = st.text_area(
+        "포스터 글 초안 (수정·추가 가능)",
+        value=base_text,
+        height=400,
+    )
+
+    st.markdown("---")
+    st.markdown("### 활용 팁")
+    st.markdown(
+        """
+        - 위 내용을 복사해 **한글, 파워포인트, 캔바** 등의 도구에 붙여넣어 포스터를 꾸며 보세요.
+        - 제목, 소제목, 아이콘, 사진 등을 추가하면 더 눈에 띄는 포스터가 됩니다.
+        - 그래프 이미지는 이 앱에서 캡처하거나, 다른 그래프 도구를 사용해 다시 그려도 좋습니다.
+        """
+    )
